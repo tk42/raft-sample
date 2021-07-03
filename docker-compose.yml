@@ -1,0 +1,33 @@
+version: "3"
+
+services:
+  build:
+    image: golang
+    working_dir: "/home"
+    volumes:
+      - ".:/home"
+    command: ["go", "build", "-v", "main.go", "statemachine.go"]
+
+  node1:
+    image: golang
+    working_dir: "/home"
+    volumes:
+      - "./main:/home/main"
+    command: ["./main", "-nodeid", "1"]
+    network_mode: "host"
+
+  node2:
+    image: golang
+    working_dir: "/home"
+    volumes:
+      - "./main:/home/main"
+    command: ["./main", "-nodeid", "2"]
+    network_mode: "host"
+
+  node3:
+    image: golang
+    working_dir: "/home"
+    volumes:
+      - "./main:/home/main"
+    command: ["./main", "-nodeid", "3"]
+    network_mode: "host"
