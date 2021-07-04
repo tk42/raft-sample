@@ -12,9 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/*
-helloworld is an example program for dragonboat.
-*/
+// Copyright 2021 tk42 (nsplat@gmail.com).
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package main
 
 import (
@@ -36,7 +47,6 @@ import (
 	"github.com/lni/dragonboat/v3"
 	"github.com/lni/dragonboat/v3/config"
 	"github.com/lni/dragonboat/v3/logger"
-	"github.com/lni/goutils/syncutil"
 )
 
 const (
@@ -240,16 +250,20 @@ func main() {
 		fmt.Fprintf(os.Stderr, "failed to add cluster, %v\n", err)
 		os.Exit(1)
 	}
-	raftStopper := syncutil.NewStopper()
-	consoleStopper := syncutil.NewStopper()
 	ch := make(chan string, 16)
-	consoleStopper.RunWorker(func() {
+
+	ctx := context.Background()
+	go func(ctx context.Context) {
 		for {
-			ch <- fmt.Sprint(time.Now())
-			time.Sleep(time.Duration(rand.Intn(5)) * time.Second)
+			select {
+			case ch <- fmt.Sprint(time.Now()):
+				time.Sleep(time.Duration(rand.Intn(5)) * time.Second)
+			case <-ctx.Done():
+				return
+			}
 		}
-	})
-	raftStopper.RunWorker(func() {
+	}(ctx)
+	go func(ctx context.Context) {
 		// this goroutine makes a linearizable read every 10 second. it returns the
 		// Count value maintained in IStateMachine. see datastore.go for details.
 		ticker := time.NewTicker(10 * time.Second)
@@ -264,12 +278,12 @@ func main() {
 					count = binary.LittleEndian.Uint64(result.([]byte))
 					fmt.Fprintf(os.Stdout, "count: %d\n", count)
 				}
-			case <-raftStopper.ShouldStop():
+			case <-ctx.Done():
 				return
 			}
 		}
-	})
-	raftStopper.RunWorker(func() {
+	}(ctx)
+	go func(ctx context.Context) {
 		// use a NO-OP client session here
 		// check the example in godoc to see how to use a regular client session
 		cs := nh.GetNoOPSession(exampleClusterID)
@@ -294,10 +308,22 @@ func main() {
 						fmt.Fprintf(os.Stderr, "SyncPropose returned error %v\n", err)
 					}
 				}
-			case <-raftStopper.ShouldStop():
+			case <-ctx.Done():
 				return
 			}
 		}
-	})
-	raftStopper.Wait()
+	}(ctx)
+
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-interrupt:
+			fmt.Println("interrupt")
+			ctx.Done()
+			return
+		}
+	}
 }
