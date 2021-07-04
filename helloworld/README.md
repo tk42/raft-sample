@@ -93,17 +93,3 @@ In [statemachine.go](statemachine.go), we have this ExampleStateMachine struct w
 [main.go](main.go) contains the main() function, it is the place where we instantiated the NodeHost instance, added the created example Raft cluster to it. It uses multiple goroutines for input and signal handling. Updates to the IStateMachine instance is achieved by making proposals.
 
 makeMembershipChange() shows how to make membership changes, including add or remove nodes.
-
-
------
-
-### Appendix1
-First, attach the running node container as follows
-```
-docker exec -it (container name) /bin/bash
-docker attach (container name)
-```
-Then, 
-```
-
-```
