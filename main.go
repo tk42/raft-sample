@@ -29,8 +29,9 @@
 package main
 
 import (
+	"bytes"
 	"context"
-	"encoding/binary"
+	"encoding/gob"
 	"errors"
 	"flag"
 	"fmt"
@@ -271,11 +272,12 @@ func main() {
 			select {
 			case <-ticker.C:
 				ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-				result, err := nh.SyncRead(ctx, exampleClusterID, []byte{})
+				result, err := nh.SyncRead(ctx, exampleClusterID, []byte{}) // <- StateMachine#Lookup ?
 				cancel()
 				if err == nil {
 					var count uint64
-					count = binary.LittleEndian.Uint64(result.([]byte))
+					buf := bytes.NewBuffer(result.([]byte))
+					_ = gob.NewDecoder(buf).Decode(&count)
 					fmt.Fprintf(os.Stdout, "count: %d\n", count)
 				}
 			case <-ctx.Done():
@@ -302,7 +304,7 @@ func main() {
 					// input is a regular message need to be proposed
 					ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 					// make a proposal to update the IStateMachine instance
-					_, err := nh.SyncPropose(ctx, cs, []byte(msg))
+					_, err := nh.SyncPropose(ctx, cs, []byte(msg)) // -> StateMachine#Update ?
 					cancel()
 					if err != nil {
 						fmt.Fprintf(os.Stderr, "SyncPropose returned error %v\n", err)

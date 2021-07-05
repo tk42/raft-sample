@@ -12,10 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Copyright 2021 tk42 (nsplat@gmail.com).
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package main
 
 import (
-	"encoding/binary"
+	"bytes"
+	"encoding/gob"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -47,9 +62,9 @@ func NewExampleStateMachine(clusterID uint64,
 // we always return the Count value as a little endian binary encoded byte
 // slice.
 func (s *ExampleStateMachine) Lookup(query interface{}) (interface{}, error) {
-	result := make([]byte, 8)
-	binary.LittleEndian.PutUint64(result, s.Count)
-	return result, nil
+	buf := bytes.NewBuffer(nil)
+	_ = gob.NewEncoder(buf).Encode(&s.Count)
+	return buf.Bytes(), nil
 }
 
 // Update updates the object using the specified committed raft entry.
@@ -70,9 +85,9 @@ func (s *ExampleStateMachine) SaveSnapshot(w io.Writer,
 	// as shown above, the only state that can be saved is the Count variable
 	// there is no external file in this IStateMachine example, we thus leave
 	// the fc untouched
-	data := make([]byte, 8)
-	binary.LittleEndian.PutUint64(data, s.Count)
-	_, err := w.Write(data)
+	buf := bytes.NewBuffer(nil)
+	_ = gob.NewEncoder(buf).Encode(&s.Count)
+	_, err := w.Write(buf.Bytes())
 	return err
 }
 
@@ -86,8 +101,8 @@ func (s *ExampleStateMachine) RecoverFromSnapshot(r io.Reader,
 	if err != nil {
 		return err
 	}
-	v := binary.LittleEndian.Uint64(data)
-	s.Count = v
+	buf := bytes.NewBuffer(data)
+	_ = gob.NewDecoder(buf).Decode(&s.Count)
 	return nil
 }
 
