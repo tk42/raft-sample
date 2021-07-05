@@ -275,10 +275,10 @@ func main() {
 				result, err := nh.SyncRead(ctx, exampleClusterID, []byte{}) // <- StateMachine#Lookup ?
 				cancel()
 				if err == nil {
-					var count uint64
+					var state State
 					buf := bytes.NewBuffer(result.([]byte))
-					_ = gob.NewDecoder(buf).Decode(&count)
-					fmt.Fprintf(os.Stdout, "count: %d\n", count)
+					_ = gob.NewDecoder(buf).Decode(&state)
+					fmt.Fprintf(os.Stdout, "state: %d\n", state)
 				}
 			case <-ctx.Done():
 				return

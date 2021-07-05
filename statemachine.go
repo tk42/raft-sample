@@ -34,9 +34,20 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"time"
 
 	sm "github.com/lni/dragonboat/v3/statemachine"
 )
+
+type State struct {
+	Count uint64
+	Time  int64
+}
+
+func (s *State) Update() {
+	s.Count++
+	s.Time = time.Now().Unix()
+}
 
 // ExampleStateMachine is the IStateMachine implementation used in the
 // helloworld example.
@@ -45,7 +56,7 @@ import (
 type ExampleStateMachine struct {
 	ClusterID uint64
 	NodeID    uint64
-	Count     uint64
+	State     State
 }
 
 // NewExampleStateMachine creates and return a new ExampleStateMachine object.
@@ -54,7 +65,7 @@ func NewExampleStateMachine(clusterID uint64,
 	return &ExampleStateMachine{
 		ClusterID: clusterID,
 		NodeID:    nodeID,
-		Count:     0,
+		State:     State{Count: 0},
 	}
 }
 
@@ -63,7 +74,7 @@ func NewExampleStateMachine(clusterID uint64,
 // slice.
 func (s *ExampleStateMachine) Lookup(query interface{}) (interface{}, error) {
 	buf := bytes.NewBuffer(nil)
-	_ = gob.NewEncoder(buf).Encode(&s.Count)
+	_ = gob.NewEncoder(buf).Encode(&s.State)
 	return buf.Bytes(), nil
 }
 
@@ -72,9 +83,9 @@ func (s *ExampleStateMachine) Update(data []byte) (sm.Result, error) {
 	// in this example, we print out the following hello world message for each
 	// incoming update request. we also increase the counter by one to remember
 	// how many updates we have applied
-	s.Count++
-	fmt.Printf("from ExampleStateMachine.Update(), msg: %s, count:%d\n",
-		string(data), s.Count)
+	s.State.Update()
+	fmt.Printf("from ExampleStateMachine.Update(), msg: %s, state:%d\n",
+		string(data), s.State)
 	return sm.Result{Value: uint64(len(data))}, nil
 }
 
@@ -86,7 +97,7 @@ func (s *ExampleStateMachine) SaveSnapshot(w io.Writer,
 	// there is no external file in this IStateMachine example, we thus leave
 	// the fc untouched
 	buf := bytes.NewBuffer(nil)
-	_ = gob.NewEncoder(buf).Encode(&s.Count)
+	_ = gob.NewEncoder(buf).Encode(&s.State)
 	_, err := w.Write(buf.Bytes())
 	return err
 }
@@ -102,7 +113,7 @@ func (s *ExampleStateMachine) RecoverFromSnapshot(r io.Reader,
 		return err
 	}
 	buf := bytes.NewBuffer(data)
-	_ = gob.NewDecoder(buf).Decode(&s.Count)
+	_ = gob.NewDecoder(buf).Decode(&s.State)
 	return nil
 }
 

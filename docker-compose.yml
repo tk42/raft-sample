@@ -6,7 +6,7 @@ services:
     working_dir: "/home"
     volumes:
       - ".:/home"
-    command: ["go", "build", "-v", "main.go", "statemachine.go"]
+    command: ["go", "build", "-o", "main", "-v", "."]
 
   node1:
     image: golang
