@@ -159,10 +159,13 @@ func main() {
 	}
 	fmt.Fprintf(os.Stdout, "node address: %s\n", nodeAddr)
 	// change the log verbosity
-	logger.GetLogger("raft").SetLevel(logger.ERROR)
-	logger.GetLogger("rsm").SetLevel(logger.WARNING)
-	logger.GetLogger("transport").SetLevel(logger.WARNING)
-	logger.GetLogger("grpc").SetLevel(logger.WARNING)
+	logger.SetLoggerFactory(func(pkgName string) logger.ILogger {
+		return GetLogger(pkgName)
+	})
+	GetLogger("raft").SetLevel(logger.ERROR)
+	GetLogger("rsm").SetLevel(logger.WARNING)
+	GetLogger("transport").SetLevel(logger.WARNING)
+	GetLogger("grpc").SetLevel(logger.WARNING)
 	// config for raft node
 	// See GoDoc for all available options
 	rc := config.Config{
